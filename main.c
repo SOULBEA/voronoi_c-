@@ -1,3 +1,4 @@
+#include<time.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdint.h>
@@ -7,14 +8,26 @@
 
 #define WIDTH 800
 #define HEIGHT 600
+
+
 #define COLOR_RED 0xFF0000FF 
 #define COLOR_GREEN 0xFF00FF00
 #define COLOR_BLUE  0xFFFF0000
 #define COLOR_WHITE 0xFFFFFFFF
-#define SEEDS_COUNT 10
+#define COLOR_BLACK 0xFF000000
+#define GRUVBOX_BRIGHT_RED     0xFF3449FB
+#define GRUVBOX_BRIGHT_GREEN   0xFF26BBB8
+#define GRUVBOX_BRIGHT_YELLOW  0xFF2FBDFA
+#define GRUVBOX_BRIGHT_BLUE    0xFF98A583
+#define GRUVBOX_BRIGHT_PURPLE  0xFF9B86D3
+#define GRUVBOX_BRIGHT_AQUA    0xFF7CC8BE
+#define GRUVBOX_BRIGHT_ORANGE  0xFF1986FE
+
+
+#define SEEDS_COUNT 20
 #define BACKGROUND_COLOR 0xFF181818
 #define SEED_MARKER_RADIUS 5
-#define SEED_MARKER_COLOR COLOR_WHITE
+#define SEED_MARKER_COLOR COLOR_BLACK
 
 
 
@@ -27,6 +40,16 @@ typedef struct{
 
 static Color32 image[HEIGHT][WIDTH];
 static Point seeds[SEEDS_COUNT];
+static Color32 palette[] = {
+  GRUVBOX_BRIGHT_RED,
+  GRUVBOX_BRIGHT_GREEN,   
+  GRUVBOX_BRIGHT_YELLOW,   
+  GRUVBOX_BRIGHT_BLUE,    
+  GRUVBOX_BRIGHT_PURPLE, 
+  GRUVBOX_BRIGHT_AQUA,    
+  GRUVBOX_BRIGHT_ORANGE,  
+};
+#define palette_count (sizeof(palette)/sizeof(palette[0]))
 
 void fill_image(Color32 color){
   for(size_t y = 0; y < HEIGHT; ++y){
@@ -34,6 +57,12 @@ void fill_image(Color32 color){
       image[y][x] = color;
     }
   }
+}
+
+int sqr_dist(int x1, int y1, int x2, int y2){
+  int dx = x1 - x2;
+  int dy = y1 - y2;
+  return dx*dx + dy*dy;
 }
 
 void fill_circle(int cx, int cy, int radius, uint32_t color){
@@ -47,7 +76,7 @@ void fill_circle(int cx, int cy, int radius, uint32_t color){
         if(0<=y && y<HEIGHT){
           int dx = cx - x;
           int dy = cy - y;
-          if (dx*dx + dy*dy <= radius*radius){
+          if (sqr_dist(cx, cy, x, y)<= radius*radius){
             image[y][x] = color;
           }
 
@@ -91,13 +120,33 @@ void generate_random_seeds(void){
   }
 }
 
-
-int main(void){
-  fill_image(BACKGROUND_COLOR);
-  generate_random_seeds();
+void render_seed_marker(void){
   for(size_t i = 0; i<SEEDS_COUNT; ++i){
     fill_circle(seeds[i].x, seeds[i]. y, SEED_MARKER_RADIUS, SEED_MARKER_COLOR);
   }
+}
+
+void render_voronoi(void){
+  for(int y = 0; y<HEIGHT; ++y){
+    for(int x = 0; x<WIDTH; ++x){
+      int j = 0;
+      for(size_t i = 1; i<SEEDS_COUNT; ++i){
+        if(sqr_dist(seeds[i].x, seeds[i].y, x, y) < sqr_dist(seeds[j].x, seeds[j].y, x, y)){
+          j = i;
+        }
+      }
+      image[y][x] = palette[j%palette_count];
+    }
+  }
+}
+
+
+int main(void){
+  srand(time(0));
+  fill_image(BACKGROUND_COLOR);
+  generate_random_seeds();
+  render_voronoi();
+  render_seed_marker();
   save_image_as_ppm(OUTPUT_FILE_PATH);
   return 0;
 }
